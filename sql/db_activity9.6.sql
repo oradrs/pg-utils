@@ -1,7 +1,9 @@
+\pset pager off
+
 SELECT (clock_timestamp() - pg_stat_activity.xact_start) AS ts_age, pg_stat_activity.state, (clock_timestamp() - pg_stat_activity.query_start) as query_age, (clock_timestamp() - state_change) as change_age, pg_stat_activity.datname, pg_stat_activity.pid, pg_stat_activity.usename, coalesce(wait_event_type = 'Lock', 'f') waiting, pg_stat_activity.client_addr, pg_stat_activity.client_port, pg_stat_activity.query
 FROM pg_stat_activity
 WHERE
-((clock_timestamp() - pg_stat_activity.xact_start > '00:00:00.1'::interval) OR (clock_timestamp() - pg_stat_activity.query_start > '00:00:00.1'::interval and state = 'idle in transaction (aborted)'))
+((clock_timestamp() - pg_stat_activity.xact_start > '00:00:00.1'::interval) OR (clock_timestamp() - pg_stat_activity.query_start > '00:00:00.1'::interval and state IN  ('idle in transaction (aborted)', 'idle in transaction' ) ))
 and pg_stat_activity.pid<>pg_backend_pid()
 ORDER BY coalesce(pg_stat_activity.xact_start, pg_stat_activity.query_start);
 
@@ -12,10 +14,10 @@ select state, client_addr, application_name, count(*) from pg_stat_activity grou
 
 -- ------------------------------------------
 
--- get cmd to cancel SQL / terminate process - for hanging session
+-- -- get cmd to cancel SQL / terminate process - for long running / hanging session
 -- WHERE clause is same as above
 \echo 
-\echo -- get cmd to cancel SQL / terminate process - for hanging session
+\echo -- get cmd to cancel SQL / terminate process - for long running / hanging session
 SELECT row_number() over() RN, q.*
 FROM (
     SELECT 
@@ -28,7 +30,7 @@ FROM (
         client_addr
     FROM pg_stat_activity
     WHERE
-    ((clock_timestamp() - pg_stat_activity.xact_start > '00:00:00.1'::interval) OR (clock_timestamp() - pg_stat_activity.query_start > '00:00:00.1'::interval and state = 'idle in transaction (aborted)'))
+((clock_timestamp() - pg_stat_activity.xact_start > '00:00:00.1'::interval) OR (clock_timestamp() - pg_stat_activity.query_start > '00:00:00.1'::interval and state IN  ('idle in transaction (aborted)', 'idle in transaction' ) ))
     and pg_stat_activity.pid<>pg_backend_pid()
     ORDER BY coalesce(pg_stat_activity.xact_start, pg_stat_activity.query_start)
     ) q;
@@ -36,3 +38,5 @@ FROM (
 -- ------------------------------------------
 
 SELECT clock_timestamp();
+
+\pset pager on
