@@ -12,3 +12,8 @@ from (
 (select setting::int max_conn 
  from pg_settings 
  where name=$$max_connections$$) t3;
+
+-- ------------------------------------------
+
+-- state wise details
+select state, client_addr, application_name, count(*) from pg_stat_activity group by state, client_addr, application_name order by 2, 1;
